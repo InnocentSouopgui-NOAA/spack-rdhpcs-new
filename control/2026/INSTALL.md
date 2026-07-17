@@ -158,15 +158,25 @@ builds, well over an hour combined is plausible on a first run.
 
 ## 7. Generate Lmod modulefiles
 
-Safe to run regardless of whether Lmod itself is confirmed working yet —
-it only writes text files:
+Run once per tier, after that tier has finished installing:
 
 ```
-spack/bin/spack -C common/config -C rendered/instances/<tier>/spack-config \
-  -e instances/<tier>/environment module lmod refresh -y
+# annual
+spack/bin/spack -C common/config -C rendered/instances/annual/spack-config \
+  -e instances/annual/environment module lmod refresh -y
 ```
 
-Run this once per tier, same as install.
+```
+# H1
+spack/bin/spack -C common/config -C rendered/instances/H1/spack-config \
+  -e instances/H1/environment module lmod refresh -y
+```
+
+```
+# Q1
+spack/bin/spack -C common/config -C rendered/instances/Q1/spack-config \
+  -e instances/Q1/environment module lmod refresh -y
+```
 
 ## 8. Wire up the meta-modules and try loading
 
