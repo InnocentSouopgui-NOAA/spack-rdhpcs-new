@@ -118,11 +118,30 @@ So: concretize then install `annual`, only then concretize then install
 `H1`, only then concretize then install `Q1`:
 
 ```
-spack/bin/spack -C common/config -C rendered/instances/<tier>/spack-config \
-  -e instances/<tier>/environment concretize
+# annual
+spack/bin/spack -C common/config -C rendered/instances/annual/spack-config \
+  -e instances/annual/environment concretize
 
-spack/bin/spack -C common/config -C rendered/instances/<tier>/spack-config \
-  -e instances/<tier>/environment install
+spack/bin/spack -C common/config -C rendered/instances/annual/spack-config \
+  -e instances/annual/environment install
+```
+
+```
+# H1 (only after annual has finished installing)
+spack/bin/spack -C common/config -C rendered/instances/H1/spack-config \
+  -e instances/H1/environment concretize
+
+spack/bin/spack -C common/config -C rendered/instances/H1/spack-config \
+  -e instances/H1/environment install
+```
+
+```
+# Q1 (only after H1 has finished installing)
+spack/bin/spack -C common/config -C rendered/instances/Q1/spack-config \
+  -e instances/Q1/environment concretize
+
+spack/bin/spack -C common/config -C rendered/instances/Q1/spack-config \
+  -e instances/Q1/environment install
 ```
 
 `annual` (cmake, ghostscript, doxygen, universal-ctags) and `H1`
