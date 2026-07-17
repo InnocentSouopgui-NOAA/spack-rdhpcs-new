@@ -1,7 +1,7 @@
 spack:
   specs:
   - cmake
-  - ghostscript
+  # - ghostscript  # slow to build, commented out for a fast first pass
   - doxygen
   - universal-ctags
   concretizer:

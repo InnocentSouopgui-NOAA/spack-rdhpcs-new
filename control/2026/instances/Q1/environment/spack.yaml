@@ -3,12 +3,13 @@ spack:
   - pmix
   - ucx
   - hwloc
-  - intel-oneapi-compilers
-  - intel-oneapi-mpi
-  - intel-oneapi-mkl
-  - hdf5+mpi ^intel-oneapi-mpi
-  - netcdf-c+mpi ^intel-oneapi-mpi
-  - netcdf-fortran ^intel-oneapi-mpi
+  # slow to build, commented out for a fast first pass:
+  # - intel-oneapi-compilers
+  # - intel-oneapi-mpi
+  # - intel-oneapi-mkl
+  # - hdf5+mpi ^intel-oneapi-mpi
+  # - netcdf-c+mpi ^intel-oneapi-mpi
+  # - netcdf-fortran ^intel-oneapi-mpi
   concretizer:
     unify: false
     reuse: true

@@ -1,7 +1,7 @@
 spack:
   specs:
   - git-lfs
-  - openmpi
+  # - openmpi  # slow to build, commented out for a fast first pass
   concretizer:
     unify: false
     reuse: true

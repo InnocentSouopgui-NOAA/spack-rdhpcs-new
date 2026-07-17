@@ -144,18 +144,17 @@ spack/bin/spack -C common/config -C rendered/instances/Q1/spack-config \
   -e instances/Q1/environment install
 ```
 
-`annual` (cmake, ghostscript, doxygen, universal-ctags) and `H1`
-(git-lfs, openmpi) should both be quick. `Q1` is the one to budget real
-time for: `intel-oneapi-compilers`, `intel-oneapi-mpi`, and
-`intel-oneapi-mkl` are large downloads and slow builds — well over an
-hour combined is plausible on a first run. If you just want to confirm
-the mechanism works before committing to that wait, temporarily comment
-those three plus `hdf5`/`netcdf-c`/`netcdf-fortran` out of
-`instances/Q1/environment/spack.yaml`, confirm `pmix`/`ucx`/`hwloc`
-install cleanly, then restore the full list and re-run — `Q1`'s
-concretize step still catches a config/spec typo in seconds, before any
-of that build time is spent, since it's the last thing to run in this
-step, not the first.
+The slowest packages in each tier are currently **commented out** in the
+tracked `environment/spack.yaml` files, for a fast first pass through all
+three tiers: `ghostscript` (annual), `openmpi` (H1), and
+`intel-oneapi-compilers`/`intel-oneapi-mpi`/`intel-oneapi-mkl`/`hdf5`/
+`netcdf-c`/`netcdf-fortran` (Q1, leaving just `pmix`/`ucx`/`hwloc`
+active). Once you've confirmed the mechanism works end to end with those
+commented out, uncomment them (in `instances/<tier>/environment/spack.yaml`)
+and re-run concretize + install for whichever tier(s) you changed. Budget
+real time for that full `Q1` build — `intel-oneapi-compilers`,
+`intel-oneapi-mpi`, and `intel-oneapi-mkl` are large downloads and slow
+builds, well over an hour combined is plausible on a first run.
 
 ## 7. Generate Lmod modulefiles
 
