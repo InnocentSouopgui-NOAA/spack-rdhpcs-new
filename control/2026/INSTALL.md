@@ -39,27 +39,37 @@ control/2026/bootstrap.sh /scratch/spack-install
 ```
 
 This writes:
-- `/scratch/spack-install/2026/instances/<tier>/spack-config/{config.yaml,upstreams.yaml,modules.yaml}`
+- `control/2026/rendered/instances/<tier>/spack-config/{config.yaml,upstreams.yaml,modules.yaml}`
+- `control/2026/rendered/bin/init.sh`
 - `/scratch/spack-install/modules/meta/2026/<tier>.lua`
-- `/scratch/spack-install/2026/bin/init.sh`
 
-Re-run it any time a template under `control/2026/templates/` or
-`control/2026/meta/templates/` changes, or if you move to a different
-install root — it's idempotent and only touches this year's output.
-`bootstrap.sh` itself is git-tracked control-plane tooling; the
-`init.sh` it generates is not — it's install-root output, regenerated
-every time you bootstrap.
+Note where each lands: the Spack config and init script go into **control
+space** (`control/2026/rendered/`), not the install root — so every
+command below references a path you already know, with the actual
+`/scratch/spack-install` location baked into those files' *contents*
+rather than something you type yourself. Only the meta-modules stay
+install-root side, since that's what Lmod's `module use` needs to point
+at directly (step 8).
+
+Re-run `bootstrap.sh` any time a template under `control/2026/templates/`
+or `control/2026/meta/templates/` changes, or if you move to a different
+install root — it's idempotent and only touches this year's rendered
+output, never another year's. `bootstrap.sh` itself is git-tracked
+control-plane tooling; everything under `control/2026/rendered/` is not
+(it's gitignored) — regenerated output, not something to hand-edit or
+commit.
 
 ## 3. Source the init script
 
 ```
-source /scratch/spack-install/2026/bin/init.sh
+source control/2026/rendered/bin/init.sh
 ```
 
 Do this in every shell you use for the remaining steps. It sets
 `SPACK_DISABLE_LOCAL_CONFIG=1` and `SPACK_USER_CACHE_PATH` so nothing
 Spack does touches `~/.spack` — this is the one manual step left; nothing
-else in this runbook requires remembering an environment variable by hand.
+else in this runbook requires remembering an environment variable, or the
+install root path, by hand.
 
 ## 4. Register compilers
 
@@ -81,15 +91,15 @@ a build. Do this for all three tiers before installing anything:
 
 ```
 control/2026/spack/bin/spack \
-  -C control/2026/common/config -C /scratch/spack-install/2026/instances/annual/spack-config \
+  -C control/2026/common/config -C control/2026/rendered/instances/annual/spack-config \
   -e control/2026/instances/annual/environment concretize
 
 control/2026/spack/bin/spack \
-  -C control/2026/common/config -C /scratch/spack-install/2026/instances/H1/spack-config \
+  -C control/2026/common/config -C control/2026/rendered/instances/H1/spack-config \
   -e control/2026/instances/H1/environment concretize
 
 control/2026/spack/bin/spack \
-  -C control/2026/common/config -C /scratch/spack-install/2026/instances/Q1/spack-config \
+  -C control/2026/common/config -C control/2026/rendered/instances/Q1/spack-config \
   -e control/2026/instances/Q1/environment concretize
 ```
 
@@ -104,7 +114,7 @@ command shape as step 5, with `install` in place of `concretize`:
 
 ```
 control/2026/spack/bin/spack \
-  -C control/2026/common/config -C /scratch/spack-install/2026/instances/<tier>/spack-config \
+  -C control/2026/common/config -C control/2026/rendered/instances/<tier>/spack-config \
   -e control/2026/instances/<tier>/environment install
 ```
 
@@ -125,7 +135,7 @@ it only writes text files:
 
 ```
 control/2026/spack/bin/spack \
-  -C control/2026/common/config -C /scratch/spack-install/2026/instances/<tier>/spack-config \
+  -C control/2026/common/config -C control/2026/rendered/instances/<tier>/spack-config \
   -e control/2026/instances/<tier>/environment module lmod refresh -y
 ```
 
@@ -154,7 +164,7 @@ copy of anything `annual` already built, and `Q1` shouldn't duplicate
 anything from `H1`/`annual`:
 
 ```
-control/2026/spack/bin/spack -C control/2026/common/config -C /scratch/spack-install/2026/instances/<tier>/spack-config find
+control/2026/spack/bin/spack -C control/2026/common/config -C control/2026/rendered/instances/<tier>/spack-config find
 ```
 
 Cross-check against the install log from step 6 — reused specs are
