@@ -65,6 +65,13 @@ rendered_dir="$year_dir/rendered"
 
 mkdir -p "$install_root"
 
+# common/config/ is where `spack compiler find` writes compilers.yaml
+# (see INSTALL.md) -- it's gitignored (host-specific) so a fresh clone
+# never has it, and spack needs the directory to already exist to use it
+# as a -C config scope at all. Create it here so it's ready right after
+# bootstrapping, before compilers are ever registered.
+mkdir -p "$year_dir/common/config"
+
 # Spack config: rendered into control space, not the install root.
 if [ -d "$year_dir/templates" ]; then
   find "$year_dir/templates" -type f | while IFS= read -r tmpl; do

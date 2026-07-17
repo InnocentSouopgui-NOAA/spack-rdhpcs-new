@@ -55,6 +55,11 @@ This writes:
 - `rendered/bin/init.sh`
 - `/scratch/spack-install/modules/meta/2026/<tier>.lua`
 
+It also creates an empty `common/config/` directory — gitignored, so a
+fresh clone never has it, but Spack needs it to exist before it can be
+used as a `-C` config scope at all (step 5 writes `compilers.yaml` into
+it).
+
 Note where each lands: the Spack config and init script go into **control
 space** (`rendered/`, i.e. `control/2026/rendered/`), not the install
 root — so every command below references a path you already know, with
