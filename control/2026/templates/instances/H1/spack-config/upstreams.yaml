@@ -1,0 +1,3 @@
+upstreams:
+  annual-2026:
+    install_tree: @@SPACK_INSTALL_ROOT@@/2026/annual/opt

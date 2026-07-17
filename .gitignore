@@ -1,0 +1,11 @@
+# Spack tool clone -- cloned separately per control/<year>/INSTALL.md,
+# pinned to whichever branch/tag that year's INSTALL.md specifies. Not
+# vendored into this repo.
+control/*/spack/
+
+# Host-specific: written by `spack compiler find` on whichever machine
+# actually runs the install. Not portable, not something to commit.
+control/*/common/config/
+
+# Claude Code's local session settings for this working directory.
+.claude/

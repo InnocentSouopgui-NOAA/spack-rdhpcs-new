@@ -1,0 +1,8 @@
+spack:
+  specs:
+  - git-lfs
+  - openmpi
+  concretizer:
+    unify: false
+    reuse: true
+  view: false

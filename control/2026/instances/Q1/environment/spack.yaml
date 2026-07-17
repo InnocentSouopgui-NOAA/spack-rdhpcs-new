@@ -1,0 +1,15 @@
+spack:
+  specs:
+  - pmix
+  - ucx
+  - hwloc
+  - intel-oneapi-compilers
+  - intel-oneapi-mpi
+  - intel-oneapi-mkl
+  - hdf5+mpi ^intel-oneapi-mpi
+  - netcdf-c+mpi ^intel-oneapi-mpi
+  - netcdf-fortran ^intel-oneapi-mpi
+  concretizer:
+    unify: false
+    reuse: true
+  view: false

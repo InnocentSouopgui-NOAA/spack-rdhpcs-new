@@ -1,0 +1,7 @@
+config:
+  install_tree:
+    root: @@SPACK_INSTALL_ROOT@@/2026/H1/opt
+  build_stage:
+  - @@SPACK_INSTALL_ROOT@@/2026/H1/stage
+  source_cache: @@SPACK_INSTALL_ROOT@@/cache/source
+  misc_cache: @@SPACK_INSTALL_ROOT@@/2026/H1/cache

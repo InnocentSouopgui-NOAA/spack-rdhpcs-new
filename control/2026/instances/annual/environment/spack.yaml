@@ -1,0 +1,10 @@
+spack:
+  specs:
+  - cmake
+  - ghostscript
+  - doxygen
+  - universal-ctags
+  concretizer:
+    unify: false
+    reuse: true
+  view: false
