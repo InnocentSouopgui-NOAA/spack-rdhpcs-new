@@ -16,53 +16,64 @@ something like `Modules based on Lua: Version 8.x`, classic Environment
 Modules prints `Modules Release X.Y.Z`). If the target's `module` command
 turns out to be classic Environment Modules, the meta-modules in this
 stack (Lua, `prepend_path`-based) won't necessarily load correctly and
-that needs resolving before step 7 below.
+that needs resolving before step 8 below.
 
-## 1. Clone Spack
+## 1. Move into this year's control directory
+
+Every command below assumes you're sitting in `control/2026/` — that's
+what keeps the rest of this runbook to short, relative paths instead of
+repeating `control/2026/...` on every line:
+
+```
+cd control/2026
+```
+
+(paths in this doc are all relative to here unless written as an absolute
+path, like the install root itself)
+
+## 2. Clone Spack
 
 Pins the version boundary for 2026 — check Spack's repo for whatever its
 current latest release branch is rather than assuming a specific version:
 
 ```
-git clone --depth 1 --branch <latest-release-branch> https://github.com/spack/spack.git \
-  control/2026/spack
+git clone --depth 1 --branch <latest-release-branch> https://github.com/spack/spack.git spack
 ```
 
-## 2. Pick an install root and bootstrap
+## 3. Pick an install root and bootstrap
 
 Pick a path on scratch storage for this year's install root (e.g.
 `/scratch/spack-install`), then render this year's config and generate
 its init script:
 
 ```
-control/2026/bootstrap.sh /scratch/spack-install
+./bootstrap.sh /scratch/spack-install
 ```
 
 This writes:
-- `control/2026/rendered/instances/<tier>/spack-config/{config.yaml,upstreams.yaml,modules.yaml}`
-- `control/2026/rendered/bin/init.sh`
+- `rendered/instances/<tier>/spack-config/{config.yaml,upstreams.yaml,modules.yaml}`
+- `rendered/bin/init.sh`
 - `/scratch/spack-install/modules/meta/2026/<tier>.lua`
 
 Note where each lands: the Spack config and init script go into **control
-space** (`control/2026/rendered/`), not the install root — so every
-command below references a path you already know, with the actual
-`/scratch/spack-install` location baked into those files' *contents*
-rather than something you type yourself. Only the meta-modules stay
-install-root side, since that's what Lmod's `module use` needs to point
-at directly (step 8).
+space** (`rendered/`, i.e. `control/2026/rendered/`), not the install
+root — so every command below references a path you already know, with
+the actual `/scratch/spack-install` location baked into those files'
+*contents* rather than something you type yourself. Only the meta-modules
+stay install-root side, since that's what Lmod's `module use` needs to
+point at directly (step 9).
 
-Re-run `bootstrap.sh` any time a template under `control/2026/templates/`
-or `control/2026/meta/templates/` changes, or if you move to a different
-install root — it's idempotent and only touches this year's rendered
-output, never another year's. `bootstrap.sh` itself is git-tracked
-control-plane tooling; everything under `control/2026/rendered/` is not
-(it's gitignored) — regenerated output, not something to hand-edit or
-commit.
+Re-run `./bootstrap.sh` any time a template under `templates/` or
+`meta/templates/` changes, or if you move to a different install root —
+it's idempotent and only touches this year's rendered output, never
+another year's. `bootstrap.sh` itself is git-tracked control-plane
+tooling; everything under `rendered/` is not (it's gitignored) —
+regenerated output, not something to hand-edit or commit.
 
-## 3. Source the init script
+## 4. Source the init script
 
 ```
-source control/2026/rendered/bin/init.sh
+source rendered/bin/init.sh
 ```
 
 Do this in every shell you use for the remaining steps. It sets
@@ -71,51 +82,47 @@ Spack does touches `~/.spack` — this is the one manual step left; nothing
 else in this runbook requires remembering an environment variable, or the
 install root path, by hand.
 
-## 4. Register compilers
+## 5. Register compilers
 
 Writes into 2026's shared scope instead of `~/.spack/compilers.yaml`:
 
 ```
-control/2026/spack/bin/spack -C control/2026/common/config compiler find
+spack/bin/spack -C common/config compiler find
 ```
 
 Confirm it found something before moving on (`cat
-control/2026/common/config/compilers.yaml`) — an empty result usually
-means the compiler prerequisite above isn't actually on `PATH`.
+common/config/compilers.yaml`) — an empty result usually means the
+compiler prerequisite above isn't actually on `PATH`.
 
-## 5. Smoke-test with `concretize` before `install`
+## 6. Smoke-test with `concretize` before `install`
 
 Concretize is fast and does no downloading/building — a good way to catch
 a config or spec typo in seconds rather than discovering it an hour into
 a build. Do this for all three tiers before installing anything:
 
 ```
-control/2026/spack/bin/spack \
-  -C control/2026/common/config -C control/2026/rendered/instances/annual/spack-config \
-  -e control/2026/instances/annual/environment concretize
+spack/bin/spack -C common/config -C rendered/instances/annual/spack-config \
+  -e instances/annual/environment concretize
 
-control/2026/spack/bin/spack \
-  -C control/2026/common/config -C control/2026/rendered/instances/H1/spack-config \
-  -e control/2026/instances/H1/environment concretize
+spack/bin/spack -C common/config -C rendered/instances/H1/spack-config \
+  -e instances/H1/environment concretize
 
-control/2026/spack/bin/spack \
-  -C control/2026/common/config -C control/2026/rendered/instances/Q1/spack-config \
-  -e control/2026/instances/Q1/environment concretize
+spack/bin/spack -C common/config -C rendered/instances/Q1/spack-config \
+  -e instances/Q1/environment concretize
 ```
 
 If any of these fail, fix the template/environment spec and re-run
-`bootstrap.sh` before continuing.
+`./bootstrap.sh` before continuing.
 
-## 6. Install, in dependency order
+## 7. Install, in dependency order
 
 `annual` first, then `H1`, then `Q1` — each depends on the previous
 already being installed so upstream reuse has something to find. Same
-command shape as step 5, with `install` in place of `concretize`:
+command shape as step 6, with `install` in place of `concretize`:
 
 ```
-control/2026/spack/bin/spack \
-  -C control/2026/common/config -C control/2026/rendered/instances/<tier>/spack-config \
-  -e control/2026/instances/<tier>/environment install
+spack/bin/spack -C common/config -C rendered/instances/<tier>/spack-config \
+  -e instances/<tier>/environment install
 ```
 
 `annual` (cmake, ghostscript, doxygen, universal-ctags) and `H1`
@@ -125,25 +132,26 @@ time for: `intel-oneapi-compilers`, `intel-oneapi-mpi`, and
 hour combined is plausible on a first run. If you just want to confirm
 the mechanism works before committing to that wait, temporarily comment
 those three plus `hdf5`/`netcdf-c`/`netcdf-fortran` out of
-`control/2026/instances/Q1/environment/spack.yaml`, confirm `pmix`/`ucx`/
-`hwloc` install cleanly, then restore the full list and re-run.
+`instances/Q1/environment/spack.yaml`, confirm `pmix`/`ucx`/`hwloc`
+install cleanly, then restore the full list and re-run.
 
-## 7. Generate Lmod modulefiles
+## 8. Generate Lmod modulefiles
 
 Safe to run regardless of whether Lmod itself is confirmed working yet —
 it only writes text files:
 
 ```
-control/2026/spack/bin/spack \
-  -C control/2026/common/config -C control/2026/rendered/instances/<tier>/spack-config \
-  -e control/2026/instances/<tier>/environment module lmod refresh -y
+spack/bin/spack -C common/config -C rendered/instances/<tier>/spack-config \
+  -e instances/<tier>/environment module lmod refresh -y
 ```
 
 Run this once per tier, same as install.
 
-## 8. Wire up the meta-modules and try loading
+## 9. Wire up the meta-modules and try loading
 
-One-time, on the target system's Lmod init (e.g. a profile.d script):
+One-time, on the target system's Lmod init (e.g. a profile.d script) —
+this one's an absolute, install-root path regardless of where you're
+`cd`'d to:
 
 ```
 module use /scratch/spack-install/modules/meta
@@ -157,15 +165,15 @@ module load 2026/Q1
 module avail         # should now also list Q1/H1/annual's actual packages
 ```
 
-## 9. Verify upstream reuse actually happened
+## 10. Verify upstream reuse actually happened
 
 Compare each tier's own install tree — `H1` shouldn't contain a second
 copy of anything `annual` already built, and `Q1` shouldn't duplicate
 anything from `H1`/`annual`:
 
 ```
-control/2026/spack/bin/spack -C control/2026/common/config -C control/2026/rendered/instances/<tier>/spack-config find
+spack/bin/spack -C common/config -C rendered/instances/<tier>/spack-config find
 ```
 
-Cross-check against the install log from step 6 — reused specs are
+Cross-check against the install log from step 7 — reused specs are
 reported as already installed rather than rebuilt.

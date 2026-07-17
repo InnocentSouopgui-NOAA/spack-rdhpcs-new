@@ -258,12 +258,18 @@ nothing from `control/2026/` is reused, by design.
 
 Not automated beyond `bootstrap.sh` — run the rest yourself. Full
 step-by-step runbook: **[`control/2026/INSTALL.md`](control/2026/INSTALL.md)**
-(clone Spack, bootstrap, source the init script, register compilers,
-concretize as a smoke test, install in dependency order, generate Lmod
-modules, wire up `module use`, verify upstream reuse). Each year gets its
-own `INSTALL.md` alongside its own `bootstrap.sh` — 2027's may read
-differently if the process changes along with the Spack/meta version for
-that year.
+(cd into `control/2026/`, clone Spack, bootstrap, source the init script,
+register compilers, concretize as a smoke test, install in dependency
+order, generate Lmod modules, wire up `module use`, verify upstream
+reuse). Each year gets its own `INSTALL.md` alongside its own
+`bootstrap.sh` — 2027's may read differently if the process changes along
+with the Spack/meta version for that year.
+
+The paths in this README are written from the repo root, since it's
+describing the general shape of things rather than a sequence to run;
+`INSTALL.md` has you `cd control/2026/` first specifically so its
+commands can stay short and relative instead of repeating that prefix on
+every line.
 
 ## Not yet built
 
