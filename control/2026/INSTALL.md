@@ -66,7 +66,7 @@ root — so every command below references a path you already know, with
 the actual `/scratch/spack-install` location baked into those files'
 *contents* rather than something you type yourself. Only the meta-modules
 stay install-root side, since that's what Lmod's `module use` needs to
-point at directly (step 9).
+point at directly (step 8).
 
 Re-run `./bootstrap.sh` any time a template under `templates/` or
 `meta/templates/` changes, or if you move to a different install root —
@@ -99,33 +99,28 @@ Confirm it found something before moving on (`cat
 common/config/compilers.yaml`) — an empty result usually means the
 compiler prerequisite above isn't actually on `PATH`.
 
-## 6. Smoke-test with `concretize` before `install`
+## 6. Concretize and install, one tier at a time, in dependency order
 
-Concretize is fast and does no downloading/building — a good way to catch
-a config or spec typo in seconds rather than discovering it an hour into
-a build. Do this for all three tiers before installing anything:
+**Do not concretize all three tiers before installing any of them.**
+Upstream reuse is decided *at concretize time*, and only by looking at
+what's already **installed** upstream — a tier that's merely concretized
+but not yet installed doesn't count. If `H1`/`annual` aren't installed
+yet when `Q1` concretizes, `Q1`'s concretizer has nothing upstream to
+reuse and resolves independently; since that result gets locked into
+`Q1`'s `spack.lock`, a later `install` won't retroactively pick up
+packages that became available upstream in the meantime. Concretizing
+ahead of installing is still useful as a quick syntax/spec sanity check
+(it's fast, no downloading/building) — just re-run `concretize` for a
+downstream tier immediately before its `install`, once its upstream
+actually has installed packages.
 
-```
-spack/bin/spack -C common/config -C rendered/instances/annual/spack-config \
-  -e instances/annual/environment concretize
-
-spack/bin/spack -C common/config -C rendered/instances/H1/spack-config \
-  -e instances/H1/environment concretize
-
-spack/bin/spack -C common/config -C rendered/instances/Q1/spack-config \
-  -e instances/Q1/environment concretize
-```
-
-If any of these fail, fix the template/environment spec and re-run
-`./bootstrap.sh` before continuing.
-
-## 7. Install, in dependency order
-
-`annual` first, then `H1`, then `Q1` — each depends on the previous
-already being installed so upstream reuse has something to find. Same
-command shape as step 6, with `install` in place of `concretize`:
+So: concretize then install `annual`, only then concretize then install
+`H1`, only then concretize then install `Q1`:
 
 ```
+spack/bin/spack -C common/config -C rendered/instances/<tier>/spack-config \
+  -e instances/<tier>/environment concretize
+
 spack/bin/spack -C common/config -C rendered/instances/<tier>/spack-config \
   -e instances/<tier>/environment install
 ```
@@ -138,9 +133,12 @@ hour combined is plausible on a first run. If you just want to confirm
 the mechanism works before committing to that wait, temporarily comment
 those three plus `hdf5`/`netcdf-c`/`netcdf-fortran` out of
 `instances/Q1/environment/spack.yaml`, confirm `pmix`/`ucx`/`hwloc`
-install cleanly, then restore the full list and re-run.
+install cleanly, then restore the full list and re-run — `Q1`'s
+concretize step still catches a config/spec typo in seconds, before any
+of that build time is spent, since it's the last thing to run in this
+step, not the first.
 
-## 8. Generate Lmod modulefiles
+## 7. Generate Lmod modulefiles
 
 Safe to run regardless of whether Lmod itself is confirmed working yet —
 it only writes text files:
@@ -152,7 +150,7 @@ spack/bin/spack -C common/config -C rendered/instances/<tier>/spack-config \
 
 Run this once per tier, same as install.
 
-## 9. Wire up the meta-modules and try loading
+## 8. Wire up the meta-modules and try loading
 
 One-time, on the target system's Lmod init (e.g. a profile.d script) —
 this one's an absolute, install-root path regardless of where you're
@@ -170,7 +168,7 @@ module load 2026/Q1
 module avail         # should now also list Q1/H1/annual's actual packages
 ```
 
-## 10. Verify upstream reuse actually happened
+## 9. Verify upstream reuse actually happened
 
 Compare each tier's own install tree — `H1` shouldn't contain a second
 copy of anything `annual` already built, and `Q1` shouldn't duplicate
@@ -180,5 +178,5 @@ anything from `H1`/`annual`:
 spack/bin/spack -C common/config -C rendered/instances/<tier>/spack-config find
 ```
 
-Cross-check against the install log from step 7 — reused specs are
+Cross-check against the install log from step 6 — reused specs are
 reported as already installed rather than rebuilt.
