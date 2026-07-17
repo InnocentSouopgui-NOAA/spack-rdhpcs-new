@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Renders this year's control-plane templates against a concrete install
-# root. Everything the installer needs to reference directly -- Spack
-# config and the init script -- is rendered into control space, not the
-# install root, so running/using this year's stack never requires
-# knowing or typing the install root path: only bootstrap.sh itself does,
-# as its one argument.
+# Renders this year's control-plane templates against a concrete OS
+# distro and install root. Everything the installer needs to reference
+# directly -- Spack config and the init script -- is rendered into
+# control space, not the install root, so running/using this year's
+# stack never requires knowing or typing the install root path: only
+# bootstrap.sh itself does, as an argument.
 #
 # This script is git-tracked control-plane tooling, isolated per year
 # (control/<year>/bootstrap.sh, not a shared control/bootstrap.sh) -- so
@@ -36,14 +36,35 @@
 #     loading modules, not for the installer, so it isn't in scope for
 #     "never type the install root" the way the two above are.)
 #
-# In all cases the placeholder @@SPACK_INSTALL_ROOT@@ is replaced with
-# the literal install root given as this script's argument.
+# Two placeholders get substituted in every rendered file:
+#   @@SPACK_INSTALL_ROOT@@  ->  the install root given as this script's
+#                               2nd argument
+#   @@SPACK_LMOD_ARCH@@     ->  linux-<distro>-x86_64, built from the
+#                               distro given as this script's 1st
+#                               argument. Spack's Lmod modules always land
+#                               two directories deeper than `roots.lmod`
+#                               (<roots.lmod>/<arch>/Core/<pkg>/<ver>.lua>,
+#                               the "Core" being everything, since we run
+#                               with an empty hierarchy) -- our
+#                               meta-modules need to know that <arch>
+#                               segment to point MODULEPATH at the right
+#                               place. Assumes platform=linux and
+#                               target=x86_64; if a future year runs on a
+#                               different platform/target, that
+#                               assumption is the one line to change
+#                               below (`lmod_arch=...`).
 #
-# Usage: control/<year>/bootstrap.sh <install-root-path>
+# The distro argument is also expected to matter beyond this fix later:
+# if different OSes end up needing different package/version choices in
+# a given tier, that's the variable this plumbs through -- nothing does
+# that yet.
+#
+# Usage: control/<year>/bootstrap.sh <distro> <install-root-path>
+#   e.g. control/2026/bootstrap.sh rocky9 /scratch/spack-install
 #
 # Idempotent: re-run after editing a template, adding a tier, or switching
-# to a different install root (e.g. a new scratch disk) -- it just
-# overwrites the previously rendered files for this year.
+# to a different distro/install root -- it just overwrites the previously
+# rendered files for this year.
 #
 # This script reads control/<year>/ and writes under control/<year>/rendered/
 # plus the given install root. It does not touch $HOME, /etc, or any other
@@ -52,16 +73,30 @@
 
 set -euo pipefail
 
-if [ $# -ne 1 ]; then
-  echo "usage: $0 <install-root-path>" >&2
+if [ $# -ne 2 ]; then
+  echo "usage: $0 <distro> <install-root-path>" >&2
+  echo "  e.g. $0 rocky9 /scratch/spack-install" >&2
   exit 1
 fi
 
-install_root="$1"
+distro="$1"
+install_root="$2"
 year_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 year="$(basename "$year_dir")"
-placeholder="@@SPACK_INSTALL_ROOT@@"
+install_root_placeholder="@@SPACK_INSTALL_ROOT@@"
+lmod_arch_placeholder="@@SPACK_LMOD_ARCH@@"
+lmod_arch="linux-${distro}-x86_64"
 rendered_dir="$year_dir/rendered"
+
+render() {
+  # render <src> <dst>: substitute both placeholders, write result.
+  local src="$1" dst="$2"
+  mkdir -p "$(dirname "$dst")"
+  sed \
+    -e "s|$install_root_placeholder|$install_root|g" \
+    -e "s|$lmod_arch_placeholder|$lmod_arch|g" \
+    "$src" > "$dst"
+}
 
 mkdir -p "$install_root"
 
@@ -76,9 +111,7 @@ mkdir -p "$year_dir/common/config"
 if [ -d "$year_dir/templates" ]; then
   find "$year_dir/templates" -type f | while IFS= read -r tmpl; do
     rel="${tmpl#"$year_dir/templates/"}"
-    dst="$rendered_dir/$rel"
-    mkdir -p "$(dirname "$dst")"
-    sed "s|$placeholder|$install_root|g" "$tmpl" > "$dst"
+    render "$tmpl" "$rendered_dir/$rel"
     echo "rendered rendered/$rel"
   done
 fi
@@ -90,8 +123,7 @@ if [ -d "$year_dir/meta/templates" ]; then
   find "$year_dir/meta/templates" -type f | while IFS= read -r tmpl; do
     name="$(basename "$tmpl")"
     dst="$install_root/modules/meta/$year/$name"
-    mkdir -p "$(dirname "$dst")"
-    sed "s|$placeholder|$install_root|g" "$tmpl" > "$dst"
+    render "$tmpl" "$dst"
     echo "rendered modules/meta/$year/$name"
   done
 fi

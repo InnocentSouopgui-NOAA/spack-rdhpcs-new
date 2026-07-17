@@ -43,12 +43,23 @@ git clone --depth 1 --branch <latest-release-branch> https://github.com/spack/sp
 ## 3. Pick an install root and bootstrap
 
 Pick a path on scratch storage for this year's install root (e.g.
-`/scratch/spack-install`), then render this year's config and generate
-its init script:
+`/scratch/spack-install`), determine this node's OS distro (run
+`spack/bin/spack arch` — it prints something like `linux-rocky9-x86_64`;
+the middle segment, e.g. `rocky9`, is the distro to pass below), then
+render this year's config and generate its init script:
 
 ```
-./bootstrap.sh /scratch/spack-install
+./bootstrap.sh rocky9 /scratch/spack-install
 ```
+
+The distro matters because Spack's Lmod modules always land two
+directories deeper than `roots.lmod` —
+`<roots.lmod>/linux-<distro>-x86_64/Core/<pkg>/<version>.lua` — and the
+meta-modules need to know that path to point MODULEPATH at the right
+place. (Assumes `linux`/`x86_64`; see the comment at the top of
+`bootstrap.sh` if a future year runs on a different platform/target.)
+This is also the variable to build on later if different OSes ever need
+different package/version choices in a tier — nothing does that yet.
 
 This writes:
 - `rendered/instances/<tier>/spack-config/{config.yaml,upstreams.yaml,modules.yaml}`

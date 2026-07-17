@@ -68,11 +68,11 @@ is additionally partitioned per year:
 
 The install root's location is never hardcoded in `control/` — templates
 use the placeholder `@@SPACK_INSTALL_ROOT@@`, and
-`control/<year>/bootstrap.sh <install-root>` substitutes it once, at
-setup time (the year itself comes from where the script lives, not from
-an argument). Only `bootstrap.sh` itself ever needs to know the install
-root's concrete path — see "Bootstrapping a year" below for where its
-output goes and why.
+`control/<year>/bootstrap.sh <distro> <install-root>` substitutes it once,
+at setup time (the year itself comes from where the script lives, not
+from an argument). Only `bootstrap.sh` itself ever needs to know the
+install root's concrete path — see "Bootstrapping a year" below for where
+its output goes and why, and for what the `<distro>` argument is for.
 
 ```
 control/                              (backed-up disk, git-tracked)
@@ -132,14 +132,26 @@ The install root's path needs to end up in a lot of places: every tier's
 `SPACK_USER_CACHE_PATH`, and every meta-module's MODULEPATH entries.
 Rather than carrying it around as an environment variable — or typing it
 into every `spack` invocation — `control/<year>/bootstrap.sh` renders it
-in once, at setup time:
+in once, at setup time. It also takes the target node's OS distro (e.g.
+`rocky9`, from `spack arch`'s middle segment) as its first argument,
+*before* the install root:
 
 ```
-control/2026/bootstrap.sh /scratch/spack-install
+control/2026/bootstrap.sh rocky9 /scratch/spack-install
 ```
+
+The distro is needed because Spack's Lmod modules land two directories
+deeper than `roots.lmod` —
+`<roots.lmod>/linux-<distro>-x86_64/Core/<pkg>/<version>.lua` — and the
+meta-modules need that `linux-<distro>-x86_64/Core` segment to point
+MODULEPATH at the right place (assumes `linux`/`x86_64`; see the comment
+in `bootstrap.sh` for other platforms/targets). It's also the variable to
+build on if different OSes ever need different package/version choices in
+a tier — nothing does that yet, but it's threaded through for that reason.
 
 This reads `control/2026/templates/` and `control/2026/meta/templates/`,
-replaces `@@SPACK_INSTALL_ROOT@@` with the literal path given, and writes:
+replaces `@@SPACK_INSTALL_ROOT@@` and `@@SPACK_LMOD_ARCH@@` with the
+literal values given, and writes:
 - Spack config to `control/2026/rendered/instances/<tier>/spack-config/...`
 - an init script to `control/2026/rendered/bin/init.sh` (see
   "Self-containment" below)
@@ -148,9 +160,9 @@ replaces `@@SPACK_INSTALL_ROOT@@` with the literal path given, and writes:
 The first two land in **control space**, not the install root — that's
 the point: after this runs, installing/concretizing/refreshing modules
 never requires typing or knowing `/scratch/spack-install` again, only
-`bootstrap.sh` itself did, as its one argument. Only the meta-modules stay
-install-root side, since Lmod needs them there directly (see the note
-above).
+`bootstrap.sh` itself did, as one of its two arguments. Only the
+meta-modules stay install-root side, since Lmod needs them there directly
+(see the note above).
 
 It only reads `control/2026/` and writes under `control/2026/rendered/`
 plus the given install root — it doesn't touch `$HOME`, `/etc`, or
@@ -249,7 +261,7 @@ their MPI provider.
 `upstreams.yaml` pointing at the right semiannual/annual, new
 `environment/spack.yaml` spec list) and `control/2026/meta/templates/`
 (new meta-module chaining its own root plus its ancestors'), then
-re-running `control/2026/bootstrap.sh <install-root>`. A new year
+re-running `control/2026/bootstrap.sh <distro> <install-root>`. A new year
 means creating `control/2027/` from scratch (its own `bootstrap.sh`,
 `spack/` clone, `common/config/`, `instances/`/`templates/`/`meta/`) —
 nothing from `control/2026/` is reused, by design.
