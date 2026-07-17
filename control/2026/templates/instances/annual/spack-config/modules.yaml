@@ -2,6 +2,7 @@ modules:
   default:
     enable:
     - lmod
+    exclude_implicits: true
     lmod:
       hash_length: 0
       hierarchy: []

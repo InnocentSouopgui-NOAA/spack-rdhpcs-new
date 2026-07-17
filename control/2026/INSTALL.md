@@ -158,24 +158,32 @@ builds, well over an hour combined is plausible on a first run.
 
 ## 7. Generate Lmod modulefiles
 
+Each tier's `modules.yaml` sets `exclude_implicits: true`, so only specs
+listed explicitly in that tier's `environment/spack.yaml` get a
+modulefile — not every transitive build/link dependency that happened to
+get installed along with them. `--delete-tree` clears out that tier's
+module root before regenerating, so if you'd already run `module lmod
+refresh` before this setting was in place, any leftover modules for
+implicit dependencies get removed too, not just skipped going forward.
+
 Run once per tier, after that tier has finished installing:
 
 ```
 # annual
 spack/bin/spack -C common/config -C rendered/instances/annual/spack-config \
-  -e instances/annual/environment module lmod refresh -y
+  -e instances/annual/environment module lmod refresh --delete-tree -y
 ```
 
 ```
 # H1
 spack/bin/spack -C common/config -C rendered/instances/H1/spack-config \
-  -e instances/H1/environment module lmod refresh -y
+  -e instances/H1/environment module lmod refresh --delete-tree -y
 ```
 
 ```
 # Q1
 spack/bin/spack -C common/config -C rendered/instances/Q1/spack-config \
-  -e instances/Q1/environment module lmod refresh -y
+  -e instances/Q1/environment module lmod refresh --delete-tree -y
 ```
 
 ## 8. Wire up the meta-modules and try loading
