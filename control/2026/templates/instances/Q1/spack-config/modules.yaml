@@ -2,9 +2,9 @@ modules:
   default:
     enable:
     - lmod
-    exclude_implicits: true
     lmod:
       hash_length: 0
       hierarchy: []
+      exclude_implicits: true
     roots:
       lmod: @@SPACK_INSTALL_ROOT@@/2026/Q1/modules/lmod
