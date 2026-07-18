@@ -33,15 +33,24 @@ tree), and a downstream instance reuses whatever is already built in its
 upstream instead of rebuilding it. Upstream resolution is *supposed* to be
 transitive — a quarterly instance's semiannual upstream should make
 `annual` reachable too, without a second declaration. In practice (Spack
-1.2.1), that two-hop lookup doesn't always resolve fully: a `concretize`
-on `Q1` produced a `Missing dependency not in database` warning for a
-spec (`libedit`) that lives in `annual`, reachable from `Q1` only via
-`H1`'s own upstream link. So every quarterly tier declares **both** its
-semiannual and `annual` directly in `upstreams.yaml` — redundant if
-transitivity does work for a given lookup, but it closes the gap where it
-doesn't, at no real cost (Spack just sees `annual`'s database reachable by
-two paths). `H1`/`H2` don't need this — they're only one hop from
-`annual` already.
+1.2.1), that two-hop lookup doesn't always resolve fully: concretizing
+`Q1` (with only `H1` declared as upstream) produced a flood of `Missing
+dependency not in database` warnings, e.g. `libedit/if2eeii needs
+compiler-wrapper-vids6zf`. The missing spec in each case was
+`compiler-wrapper` — Spack 1.x tracks the compiler used to build
+something as an actual build dependency rather than just a `%compiler`
+annotation — and `compiler-wrapper` lives in `annual`, while `libedit`
+(and apparently most other things `H1` built) lives in `H1` itself, one
+hop closer to `Q1`. So nearly everything installed in `H1` triggered its
+own copy of the warning: each has a `compiler-wrapper` dependency edge
+pointing at `annual`, and `annual` wasn't reachable from `Q1` except
+transitively through `H1`. Declaring `annual` directly in `Q1`'s
+`upstreams.yaml`, alongside `H1`, made the warnings disappear entirely.
+So every quarterly tier declares **both** its semiannual and `annual`
+directly in `upstreams.yaml` — redundant if transitivity does work for a
+given lookup, but it closes the gap where it doesn't, at no real cost
+(Spack just sees `annual`'s database reachable by two paths). `H1`/`H2`
+don't need this — they're only one hop from `annual` already.
 
 ## Control plane vs. install plane
 
