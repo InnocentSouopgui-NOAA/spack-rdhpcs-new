@@ -30,10 +30,18 @@ compatible with however 2026 is set up, without touching 2026 at all. See
 "Upstream" here is Spack's own chaining mechanism (`upstreams.yaml`): each
 tier is a fully separate Spack instance (own config scope, own install
 tree), and a downstream instance reuses whatever is already built in its
-upstream instead of rebuilding it. Upstream resolution is transitive, so a
-quarterly instance only needs to declare its semiannual as upstream — the
-semiannual's own link to `annual` makes `annual`'s packages reachable too
-without a second declaration.
+upstream instead of rebuilding it. Upstream resolution is *supposed* to be
+transitive — a quarterly instance's semiannual upstream should make
+`annual` reachable too, without a second declaration. In practice (Spack
+1.2.1), that two-hop lookup doesn't always resolve fully: a `concretize`
+on `Q1` produced a `Missing dependency not in database` warning for a
+spec (`libedit`) that lives in `annual`, reachable from `Q1` only via
+`H1`'s own upstream link. So every quarterly tier declares **both** its
+semiannual and `annual` directly in `upstreams.yaml` — redundant if
+transitivity does work for a given lookup, but it closes the gap where it
+doesn't, at no real cost (Spack just sees `annual`'s database reachable by
+two paths). `H1`/`H2` don't need this — they're only one hop from
+`annual` already.
 
 ## Control plane vs. install plane
 
@@ -251,16 +259,18 @@ since nothing outside `bootstrap.sh` depends on it beyond the one
 |--------|----------|-------|
 | annual | —        | cmake, ghostscript, doxygen, universal-ctags |
 | H1     | annual   | git-lfs, openmpi |
-| Q1     | H1       | pmix, ucx, hwloc, intel-oneapi-compilers, intel-oneapi-mpi, intel-oneapi-mkl, hdf5+mpi ^intel-oneapi-mpi, netcdf-c+mpi ^intel-oneapi-mpi, netcdf-fortran ^intel-oneapi-mpi |
+| Q1     | H1, annual (both explicit — see above) | pmix, ucx, hwloc, intel-oneapi-compilers, intel-oneapi-mpi, intel-oneapi-mkl, hdf5+mpi ^intel-oneapi-mpi, netcdf-c+mpi ^intel-oneapi-mpi, netcdf-fortran ^intel-oneapi-mpi |
 
 `hdf5`, `netcdf-c`, and `netcdf-fortran` are pinned to `intel-oneapi-mpi` as
 their MPI provider.
 
 `H2`, `Q2`–`Q4`, and future years are not yet scaffolded. A new tier within
 2026 means copying the pattern under `control/2026/templates/` (new
-`upstreams.yaml` pointing at the right semiannual/annual, new
-`environment/spack.yaml` spec list) and `control/2026/meta/templates/`
-(new meta-module chaining its own root plus its ancestors'), then
+`upstreams.yaml` — `H2` points at just `annual`; a new quarterly tier
+points at **both** its semiannual and `annual` explicitly, per the note
+above, new `environment/spack.yaml` spec list) and
+`control/2026/meta/templates/` (new meta-module chaining its own root
+plus its ancestors'), then
 re-running `control/2026/bootstrap.sh <distro> <install-root>`. A new year
 means creating `control/2027/` from scratch (its own `bootstrap.sh`,
 `spack/` clone, `common/config/`, `instances/`/`templates/`/`meta/`) —

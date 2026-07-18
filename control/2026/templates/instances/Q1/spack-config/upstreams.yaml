@@ -1,3 +1,5 @@
 upstreams:
   H1-2026:
     install_tree: @@SPACK_INSTALL_ROOT@@/2026/H1/opt
+  annual-2026:
+    install_tree: @@SPACK_INSTALL_ROOT@@/2026/annual/opt
