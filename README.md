@@ -95,6 +95,7 @@ its output goes and why, and for what the `<distro>` argument is for.
 control/                              (backed-up disk, git-tracked)
   2026/
     bootstrap.sh                     (isolated per year, see above)
+    core-compilers.yaml              (distro -> Lmod core compiler, see below)
     spack/                           (Spack clone pinned for 2026)
     common/config/compilers.yaml     (shared across 2026's tiers only, see below)
     instances/<tier>/environment/spack.yaml        (hand-authored specs)
@@ -107,6 +108,7 @@ control/                              (backed-up disk, git-tracked)
       bin/init.sh
   2027/
     bootstrap.sh                     (its own copy, free to diverge)
+    core-compilers.yaml
     spack/                           (a different, possibly incompatible Spack clone)
     common/config/compilers.yaml
     instances/<tier>/environment/spack.yaml
@@ -162,13 +164,19 @@ deeper than `roots.lmod` —
 `<roots.lmod>/linux-<distro>-x86_64/Core/<pkg>/<version>.lua` — and the
 meta-modules need that `linux-<distro>-x86_64/Core` segment to point
 MODULEPATH at the right place (assumes `linux`/`x86_64`; see the comment
-in `bootstrap.sh` for other platforms/targets). It's also the variable to
-build on if different OSes ever need different package/version choices in
-a tier — nothing does that yet, but it's threaded through for that reason.
+in `bootstrap.sh` for other platforms/targets). The distro is also looked
+up in `control/2026/core-compilers.yaml` — a git-tracked, hand-authored
+mapping of distro to the compiler that should be Lmod's "core" compiler
+that year (e.g. `rocky9: gcc@11.5`) — to fill in `modules.yaml`'s
+`core_compilers` (see "Modules" below). `bootstrap.sh` fails loudly if
+the distro isn't listed there. Beyond these two uses, `distro` is also
+the variable to build on if different OSes ever need different
+package/version choices in a tier — nothing does that yet, but it's
+threaded through for that reason.
 
 This reads `control/2026/templates/` and `control/2026/meta/templates/`,
-replaces `@@SPACK_INSTALL_ROOT@@` and `@@SPACK_LMOD_ARCH@@` with the
-literal values given, and writes:
+replaces `@@SPACK_INSTALL_ROOT@@`, `@@SPACK_LMOD_ARCH@@`, and
+`@@SPACK_CORE_COMPILER@@` with the literal/looked-up values, and writes:
 - Spack config to `control/2026/rendered/instances/<tier>/spack-config/...`
 - an init script to `control/2026/rendered/bin/init.sh` (see
   "Self-containment" below)
@@ -251,6 +259,31 @@ upstream of it (most specific first), so loading `2026/Q1` exposes Q1, H1,
 and annual's packages all at once. There's no conflict enforcement
 (`family()`/`conflict()`) — loading multiple tiers or years side by side
 is allowed and unmanaged by design.
+
+Within a tier's own module root, `modules.yaml` enables Lmod's
+**hierarchical** module layout (`hierarchy: [mpi]`, plus `core_compilers`
+naming the compiler `core-compilers.yaml` picked for the year's distro),
+applied uniformly across all tiers:
+
+- A package built with the `core_compilers` compiler (e.g. the default
+  system GCC on this distro) lands directly under `Core` — visible to
+  `module avail` as soon as its tier's meta-module is loaded, no
+  prerequisite.
+- A package built with any *other* compiler — Intel OneAPI, a newer GCC
+  installed via Spack, whatever — lands nested under that compiler's own
+  directory instead, invisible until that compiler's module is loaded
+  first (e.g. `module load gcc/13.2.0`).
+- A package that depends on the `mpi` virtual (OpenMPI, Intel oneAPI MPI)
+  is nested one level deeper still, invisible until that MPI's module is
+  loaded (e.g. `module load openmpi/4.1.6`) — on top of its compiler
+  being loaded first, if it also isn't the core compiler.
+
+This is orthogonal to, and composes with, the meta-module chaining above:
+meta-modules expose each tier's top-level `Core` directory across the
+upstream chain; Lmod's own hierarchy logic (built into the compiler/MPI
+modulefiles Spack generates) reveals the deeper, gated layers underneath
+as those get loaded. Nothing about the meta-modules themselves needed to
+change for this.
 
 `control/<year>/meta/` is deliberately kept separate from
 `control/<year>/templates/` (the Spack config), even though today both are

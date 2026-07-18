@@ -1,0 +1,13 @@
+# Maps an OS distro (the same string passed as bootstrap.sh's first
+# argument) to the compiler spec that should be Lmod's "core" compiler
+# for that distro -- the one whose builds are visible without loading
+# any compiler module first. Every other compiler used this year (Intel
+# OneAPI, a newer GCC installed via Spack, ...) requires loading its own
+# module before its builds become visible (see modules.yaml's
+# core_compilers, and "Bootstrapping a year" in the top-level README).
+#
+# One line per distro: "<distro>: <compiler spec>". bootstrap.sh fails
+# loudly if the distro it's given isn't listed here -- add an entry
+# rather than guessing.
+
+rocky9: gcc@11.5

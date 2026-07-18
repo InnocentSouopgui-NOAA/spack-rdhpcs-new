@@ -52,14 +52,24 @@ render this year's config and generate its init script:
 ./bootstrap.sh rocky9 /scratch/spack-install
 ```
 
-The distro matters because Spack's Lmod modules always land two
-directories deeper than `roots.lmod` —
-`<roots.lmod>/linux-<distro>-x86_64/Core/<pkg>/<version>.lua` — and the
+The distro matters for two things. First, Spack's Lmod modules always
+land two-plus directories deeper than `roots.lmod` —
+`<roots.lmod>/linux-<distro>-x86_64/Core/<pkg>/<version>.lua` (or deeper
+still under the compiler/mpi hierarchy, see step 8) — and the
 meta-modules need to know that path to point MODULEPATH at the right
 place. (Assumes `linux`/`x86_64`; see the comment at the top of
 `bootstrap.sh` if a future year runs on a different platform/target.)
-This is also the variable to build on later if different OSes ever need
-different package/version choices in a tier — nothing does that yet.
+
+Second, `bootstrap.sh` looks the distro up in `core-compilers.yaml`
+(sitting alongside it, git-tracked) to fill in `modules.yaml`'s
+`core_compilers` — the compiler whose builds are visible without loading
+a compiler module first (see step 8). It fails loudly if the distro
+isn't listed there; add a line like `rocky9: gcc@11.5` rather than
+guessing.
+
+`distro` is also the variable to build on later if different OSes ever
+need different package/version choices in a tier — nothing does that
+yet.
 
 This writes:
 - `rendered/instances/<tier>/spack-config/{config.yaml,upstreams.yaml,modules.yaml}`
@@ -214,6 +224,16 @@ module avail        # should show 2026/annual, 2026/H1, 2026/Q1
 module load 2026/Q1
 module avail         # should now also list Q1/H1/annual's actual packages
 ```
+
+That last `module avail` will only show packages built with the
+`core_compilers` compiler from `core-compilers.yaml` (e.g. the default
+system GCC) — that's the point of the hierarchy config in `modules.yaml`.
+Anything built with a different compiler (Intel OneAPI, a newer GCC
+installed via Spack) or that depends on MPI won't show up until you load
+*that* compiler's or MPI's own module first — e.g.
+`module load gcc/13.2.0` reveals what was built with it,
+`module load openmpi/4.1.6` (or `intel-oneapi-mpi/...`) reveals
+MPI-linked packages on top of that.
 
 ## 9. Verify upstream reuse actually happened
 

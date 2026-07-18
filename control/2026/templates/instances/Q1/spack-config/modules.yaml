@@ -4,7 +4,10 @@ modules:
     - lmod
     lmod:
       hash_length: 0
-      hierarchy: []
+      hierarchy:
+      - mpi
+      core_compilers:
+      - "@@SPACK_CORE_COMPILER@@"
       exclude_implicits: true
     roots:
       lmod: @@SPACK_INSTALL_ROOT@@/2026/Q1/modules/lmod

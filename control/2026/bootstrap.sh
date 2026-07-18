@@ -36,28 +36,38 @@
 #     loading modules, not for the installer, so it isn't in scope for
 #     "never type the install root" the way the two above are.)
 #
-# Two placeholders get substituted in every rendered file:
+# Three placeholders get substituted in every rendered file:
 #   @@SPACK_INSTALL_ROOT@@  ->  the install root given as this script's
 #                               2nd argument
 #   @@SPACK_LMOD_ARCH@@     ->  linux-<distro>-x86_64, built from the
 #                               distro given as this script's 1st
 #                               argument. Spack's Lmod modules always land
-#                               two directories deeper than `roots.lmod`
+#                               two-plus directories deeper than
+#                               `roots.lmod`
 #                               (<roots.lmod>/<arch>/Core/<pkg>/<ver>.lua>,
-#                               the "Core" being everything, since we run
-#                               with an empty hierarchy) -- our
-#                               meta-modules need to know that <arch>
-#                               segment to point MODULEPATH at the right
-#                               place. Assumes platform=linux and
-#                               target=x86_64; if a future year runs on a
-#                               different platform/target, that
-#                               assumption is the one line to change
-#                               below (`lmod_arch=...`).
+#                               or deeper still under a compiler/mpi
+#                               hierarchy) -- our meta-modules need to
+#                               know that <arch> segment to point
+#                               MODULEPATH at the right place. Assumes
+#                               platform=linux and target=x86_64; if a
+#                               future year runs on a different
+#                               platform/target, that assumption is the
+#                               one line to change below (`lmod_arch=...`).
+#   @@SPACK_CORE_COMPILER@@ ->  the compiler spec looked up for this
+#                               distro in core-compilers.yaml (e.g.
+#                               `gcc@11.5` for `rocky9`). Used by
+#                               modules.yaml's `core_compilers` so that
+#                               only builds made with this compiler are
+#                               visible without loading a compiler module
+#                               first -- see the README's "Modules"
+#                               section. Fails loudly if the distro isn't
+#                               listed there; add an entry rather than
+#                               guessing.
 #
-# The distro argument is also expected to matter beyond this fix later:
-# if different OSes end up needing different package/version choices in
-# a given tier, that's the variable this plumbs through -- nothing does
-# that yet.
+# The distro argument is also expected to matter beyond these two fixes
+# later: if different OSes end up needing different package/version
+# choices in a given tier, that's the variable this plumbs through --
+# nothing does that yet.
 #
 # Usage: control/<year>/bootstrap.sh <distro> <install-root-path>
 #   e.g. control/2026/bootstrap.sh rocky9 /scratch/spack-install
@@ -85,16 +95,30 @@ year_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 year="$(basename "$year_dir")"
 install_root_placeholder="@@SPACK_INSTALL_ROOT@@"
 lmod_arch_placeholder="@@SPACK_LMOD_ARCH@@"
+core_compiler_placeholder="@@SPACK_CORE_COMPILER@@"
 lmod_arch="linux-${distro}-x86_64"
 rendered_dir="$year_dir/rendered"
 
+core_compilers_file="$year_dir/core-compilers.yaml"
+if [ ! -f "$core_compilers_file" ]; then
+  echo "no core-compilers.yaml at $core_compilers_file" >&2
+  exit 1
+fi
+core_compiler="$(grep -E "^${distro}:" "$core_compilers_file" | sed -E 's/^[^:]+:[[:space:]]*//' | head -1 || true)"
+if [ -z "$core_compiler" ]; then
+  echo "no core compiler defined for distro '$distro' in $core_compilers_file" >&2
+  echo "add a line like '$distro: gcc@11.5' there" >&2
+  exit 1
+fi
+
 render() {
-  # render <src> <dst>: substitute both placeholders, write result.
+  # render <src> <dst>: substitute all placeholders, write result.
   local src="$1" dst="$2"
   mkdir -p "$(dirname "$dst")"
   sed \
     -e "s|$install_root_placeholder|$install_root|g" \
     -e "s|$lmod_arch_placeholder|$lmod_arch|g" \
+    -e "s|$core_compiler_placeholder|$core_compiler|g" \
     "$src" > "$dst"
 }
 
