@@ -315,3 +315,18 @@ every line.
 - `control/<year>/meta/` is plain files today, not an actual git clone of
   anything — it's structured so that slotting in a real meta-module repo
   later is a drop-in change, not a redesign.
+- Hiding `annual`/`H1`(/`H2`) as user-facing meta-modules, so only the
+  quarters (`Q1`–`Q4`) show up and users only ever perceive the quarterly
+  organization. Doesn't change package *availability* — loading a quarter
+  already chains MODULEPATH through its semiannual and `annual` — only
+  whether those tiers' own meta-module names are independently
+  loadable/visible. Two options considered: (1) simply don't generate
+  `annual.lua`/`H1.lua` under `meta/templates/` at all (needs no
+  `bootstrap.sh` change, just not authoring those two template files), or
+  (2) keep generating them but mark them Lmod-hidden (dot-prefixed
+  version file or a `hidden()` `.modulerc.lua`), preserving an
+  undocumented escape hatch for "just annual" or "just H1." Either way,
+  since a quarter only exists once its semiannual is installed, standing
+  up each quarterly instance (and its meta-module) as soon as its
+  semiannual is ready — even with an empty spec list at first — avoids a
+  window with no loadable module at all.
